@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Chart } from 'chart.js';
 import { TwitchChatService } from '../common/service/twitch-chat.service';
 import { ITwitchChatInput, ITwitchChatBuzzOutput, ITwitchChatMessageOutput } from '../common/dao/twitch-chat';
+import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 
 @Component({
   selector: 'app-chart',
@@ -17,11 +18,18 @@ export class ChartComponent implements OnInit {
   public defaultTimeZone?: string;
   public defaultFixedInterval?: string;
 
-  constructor (private twitchChatService: TwitchChatService) {}
+  constructor (
+    private modalService: NgbModal,
+    private twitchChatService: TwitchChatService
+  ) {}
 
   ngOnInit(): void {
     this.setDefaultTwitchChatInput();
     this.createChart();
+  }
+
+  public open(modal: any): void {
+    this.modalService.open(modal);
   }
 
   setDefaultChannelName() {
@@ -38,7 +46,7 @@ export class ChartComponent implements OnInit {
   }
 
   setDefaultFixedInterval() {
-    this.defaultFixedInterval = "10m";
+    this.defaultFixedInterval = "30m";
   }
 
   setDefaultTwitchChatInput() {
@@ -97,8 +105,7 @@ export class ChartComponent implements OnInit {
         datasets: [
           {
             label: chartId,
-            data: data,
-            backgroundColor: 'blue'
+            data: data
           }
         ]
       },

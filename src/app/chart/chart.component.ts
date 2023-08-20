@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Chart } from 'chart.js';
+import { TwitchChatService } from '../common/service/twitch-chat.service';
+import { ITwitchChatInput, ITwitchChatBuzzOutput, ITwitchChatMessageOutput } from '../common/dao/twitch-chat';
 
 @Component({
   selector: 'app-chart',
@@ -10,40 +12,99 @@ export class ChartComponent implements OnInit {
 
   public chart: any;
 
-  constructor () {}
+  public defaultTwitchChatInput: ITwitchChatInput = {};
+  public defaultChannelName?: string;
+  public defaultTimeZone?: string;
+  public defaultFixedInterval?: string;
+
+  constructor (private twitchChatService: TwitchChatService) {}
 
   ngOnInit(): void {
-      this.createChart();
+    this.setDefaultTwitchChatInput();
+    this.createChart();
   }
 
-  createChart(){
+  setDefaultChannelName() {
+    this.defaultChannelName = "nanayango3o";
+  }
 
-    this.chart = new Chart("MyChart", {
-      type: 'line', //this denotes tha type of chart
+  setDefaultTimeZone() {
+    const timeZoneMatch: RegExpMatchArray | null = new Date().toString().match(/([-\+][0-9]+)\s/);
+    if (timeZoneMatch && timeZoneMatch.length >= 1) {
+      this.defaultTimeZone = `${timeZoneMatch[1].slice(0,3)}:${timeZoneMatch[1].slice(3,5)}`;
+    } else {
+      this.defaultTimeZone = "+09:00";
+    }
+  }
 
-      data: {// values on X-Axis
-        labels: ['2022-05-10', '2022-05-11', '2022-05-12','2022-05-13',
-								 '2022-05-14', '2022-05-15', '2022-05-16','2022-05-17', ],
-	       datasets: [
+  setDefaultFixedInterval() {
+    this.defaultFixedInterval = "10m";
+  }
+
+  setDefaultTwitchChatInput() {
+    this.setDefaultChannelName();
+    this.setDefaultTimeZone();
+    this.setDefaultFixedInterval();
+
+    const dateTimeStart = new Date();
+    dateTimeStart.setDate(dateTimeStart.getDate()-6);
+    const dateTimeEnd = new Date();
+
+    function getFormattedDate(date: Date): string {
+      function getNum(num: number): string {
+        if (num >= 10) {
+          return num.toString();
+        } else {
+          return `0${num}`
+        }
+      }
+      return `${getNum(date.getFullYear())}-${getNum(date.getMonth()+1)}-${getNum(date.getDate())} ${getNum(date.getHours())}:${date.getMinutes()}`;
+    }
+
+    this.defaultTwitchChatInput = {
+      chartId: `${this.defaultChannelName} :: 1`,
+      channelName: this.defaultChannelName,
+      dateTimeStart: getFormattedDate(dateTimeStart),
+      dateTimeEnd: getFormattedDate(dateTimeEnd),
+      timeZone: this.defaultTimeZone,
+      fixedInterval: this.defaultFixedInterval,
+      shouldMatchPhrase: [],
+      mustMatchPhrase: [],
+      mustNotMatchPhrase: []
+    };
+  }
+
+  async getChartData(twitchChatInput: ITwitchChatInput): Promise<ITwitchChatBuzzOutput> {
+    console.log(twitchChatInput)
+    const response: ITwitchChatBuzzOutput = await this.twitchChatService.getTwitchChatBuzz(twitchChatInput);
+    return response;
+  }
+
+  async createChart(){
+    const chartData: ITwitchChatBuzzOutput = await this.getChartData(this.defaultTwitchChatInput);
+    const value = chartData.value??{};
+    const labels = Object.keys(value);
+    const chartId = chartData.chartId;
+    let data: any[] = [];
+    labels.forEach(label => {
+      data.push(value[label]);
+    });
+
+    this.chart = new Chart("MainChart", {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
           {
-            label: "Sales",
-            data: ['467','576', '572', '79', '92',
-								 '574', '573', '576'],
+            label: chartId,
+            data: data,
             backgroundColor: 'blue'
-          },
-          {
-            label: "Profit",
-            data: ['542', '542', '536', '327', '17',
-									 '0.00', '538', '541'],
-            backgroundColor: 'limegreen'
           }
         ]
       },
       options: {
-        aspectRatio:2.5
+          aspectRatio:2.5
       }
-
     });
   }
-
 }
